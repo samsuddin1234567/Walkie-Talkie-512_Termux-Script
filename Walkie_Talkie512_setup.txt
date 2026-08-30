@@ -1,0 +1,131 @@
+ কোড পেস্ট করার সময় অদৃশ্য নন-ব্রেকিং স্পেস (U+00A0) ঢুকে গেছে।
+​টার্মাক্স এডিটর দিয়ে অদৃশ্য স্পেসগুলো সরাতে বা সম্পূর্ণ নতুন ফাইল তৈরি করতে নিচের যেকোনো একটি সমাধান প্রয়োগ করুন:
+​সমাধান ১: অটোমেটিক কমান্ডের মাধ্যমে অদৃশ্য স্পেস দূর করা
+টার্মাক্সে নিচের কমান্ডটি দিয়ে এক ক্লিকেই ফাইলের সব হিডেন স্পেস ঠিক করে ফেলুন:
+
+
+sed -i 's/\xA0/ /g' walkie_talkie512.py
+
+
+কমান্ডটি রান করার পর আবার কোডটি চালান:
+
+python walkie_talkie512.py
+
+
+সমাধান ২: নতুন পরিষ্কার ফাইল তৈরি করা
+আগের ফাইলটি মুছে নতুন ফাইল বানিয়ে ফ্রেশ কোড পেস্ট করুন:
+​১. পুরোনো ফাইল মুছুন:
+
+rm walkie_talkie512.py
+
+
+২. ন্যানো দিয়ে ফাইলটি নতুন করে খুলুন:
+
+nano walkie_talkie512.py
+
+
+৩. নিচের কোডটি কপি করে পেস্ট করুন:
+
+
+import socket
+import pyaudio
+import threading
+import sys
+
+# Audio configuration
+FORMAT = pyaudio.paInt16
+CHANNELS = 1
+RATE = 44100
+CHUNK = 512
+
+audio = pyaudio.PyAudio()
+
+def print_header():
+    print("="*60)
+    logo = """
+       _______
+     _/.-----.\_
+    | |       | |
+    |_|_______|_|
+      /   .   \\
+     |____.____|
+     |         |
+     |         |
+     |_________|
+    """
+    print(logo)
+    print("      Terminal Walkie Talkie - Version 1.0       ")
+    print("      Developer: Samsuddin                       ")
+    print("="*60)
+
+def receive_audio(sock, output_stream):
+    while True:
+        try:
+            data, addr = sock.recvfrom(CHUNK * 2)
+            output_stream.write(data)
+        except:
+            break
+
+def transmit_audio(sock, input_stream, target_addr):
+    while True:
+        mic_data = input_stream.read(CHUNK)
+        sock.sendto(mic_data, target_addr)
+
+def main():
+    print_header()
+    print("\nOptions:")
+    print("A. Start as Server")
+    print("B. Start as Client")
+    print("C. Set Local IP Manually")
+    print("D. Exit")
+    
+    choice = input("\nYour choice (A/B/C/D): ").upper()
+
+    if choice == 'D':
+        print("Exiting program.")
+        sys.exit()
+
+    if choice == 'C':
+        local_ip = input("Enter your custom local IP to bind: ").strip()
+        print(f"Local IP successfully set to: {local_ip}")
+
+    input_stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    output_stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, frames_per_buffer=CHUNK)
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    
+    if choice == 'A':
+        sock.bind(('0.0.0.0', 12345))
+        print("\n[Device Status: Ready as Server]")
+        print("Waiting for client...")
+        
+        data, addr = sock.recvfrom(CHUNK * 2)
+        output_stream.write(data)
+        
+        threading.Thread(target=receive_audio, args=(sock, output_stream)).start()
+        threading.Thread(target=transmit_audio, args=(sock, input_stream, addr)).start()
+        
+    elif choice == 'B':
+        server_ip = input("Enter Server IP address: ").strip()
+        target_addr = (server_ip, 12345)
+        print("\n[Device Status: Ready as Client]")
+        print("Connected to server.")
+        
+        threading.Thread(target=transmit_audio, args=(sock, input_stream, target_addr)).start()
+        threading.Thread(target=receive_audio, args=(sock, output_stream)).start()
+    else:
+        print("Invalid option selected.")
+        sys.exit()
+
+if __name__ == "__main__":
+    main()
+
+
+
+৪. সেভ করতে Ctrl + O চেপে Enter দিন, তারপর বের হতে Ctrl + X চাপুন।
+​৫. এবার রান করুন:
+
+python walkie_talkie512.py
+
+
+
